@@ -1,22 +1,60 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, Text, Button, Alert, StyleSheet } from 'react-native';
+import { getProducts, deleteProduct } from '../api';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function ProductListScreen({ navigation, products }) {
+export default function ProductsList({ navigation }) {
+  const [products, setProducts] = useState([]);
+
+  // Función para cargar los productos desde la API
+  const loadProducts = async () => {
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Error al cargar los productos:', error);
+    }
+  };
+
+  // useFocusEffect se asegura de que los productos se carguen cada vez que la pantalla recibe foco
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProducts();
+    }, [])
+  );
+
+  // Función para eliminar un producto
+  const handleDelete = async (productId) => {
+    try {
+      await deleteProduct(productId);
+      loadProducts(); // Vuelve a cargar los productos después de eliminar
+      Alert.alert('Producto eliminado', 'El producto ha sido eliminado correctamente.');
+    } catch (error) {
+      console.error('Error al eliminar el producto:', error);
+      Alert.alert('Error', 'Hubo un problema al eliminar el producto.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={products}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.product_id}
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.productItem} 
-            onPress={() => navigation.navigate('ProductDetail', { product: item })}
-          >
-            <Text style={styles.productName}>{item.name}</Text>
-          </TouchableOpacity>
+          <View style={styles.product}>
+            <Text>{item.name}</Text>
+            <Text>{item.description}</Text>
+            <Button
+              title="Eliminar"
+              onPress={() => handleDelete(item.product_id)}
+            />
+          </View>
         )}
       />
-      <Button title="Add Product" onPress={() => navigation.navigate('AddProduct')} color="#ff5c5c" />
+      <Button
+        title="Agregar Producto"
+        onPress={() => navigation.navigate('AddProduct')}
+      />
     </View>
   );
 }
@@ -25,22 +63,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f8f8',
   },
-  productItem: {
-    padding: 15,
-    marginVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  productName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  product: {
+    padding: 10,
+    marginBottom: 10,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
   },
 });
